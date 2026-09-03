@@ -20,3 +20,11 @@ jobs:
 
           echo "Indirilen sayfa boyutu:"
           wc -c biletix.html
+
+          echo "Bilet durumu kontrol ediliyor..."
+
+          if grep -qi "Yakında" biletix.html; then
+            echo "Biletler henuz satisa cikmamis."
+          else
+            echo "Yakinda ifadesi bulunamadi. Satis durumu degismis olabilir!"
+          fi
