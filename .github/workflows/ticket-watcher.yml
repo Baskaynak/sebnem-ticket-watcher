@@ -4,9 +4,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  check-ticket:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test watcher
-        run: echo "Sebnem Ferah Ticket Watcher calisiyor!"
+      - name: Check Biletix connection
+        run: |
+          echo "Biletix kontrol ediliyor..."
+
+          curl -L \
+            -A "Mozilla/5.0" \
+            -o biletix.html \
+            -w "HTTP Status: %{http_code}\n" \
+            "https://www.biletix.com/etkinlik/5PSF7/TURKIYE/tr"
+
+          echo "Indirilen sayfa boyutu:"
+          wc -c biletix.html
