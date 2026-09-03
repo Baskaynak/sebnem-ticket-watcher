@@ -8,7 +8,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Biletix connection
+      - name: Check Biletix ticket status
+        id: ticket_check
         run: |
           echo "Biletix kontrol ediliyor..."
 
@@ -25,11 +26,15 @@ jobs:
 
           if grep -qi "Yakında" biletix.html; then
             echo "Biletler henuz satisa cikmamis."
+            echo "ticket_available=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Yakinda ifadesi bulunamadi. Satis durumu degismis olabilir!"
+            echo "Yakinda ifadesi bulunamadi!"
+            echo "Satis durumu degismis olabilir."
+            echo "ticket_available=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Send test email
+      - name: Send ticket notification email
+        if: steps.ticket_check.outputs.ticket_available == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -39,11 +44,22 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_APP_PASSWORD }}
 
-          subject: "Sebnem Ticket Watcher - Test"
+          subject: "ACIL - Sebnem Ferah Antalya biletleri satisa cikmis olabilir!"
+
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_USERNAME }}
 
           body: |
-            Test basarili!
+            Sebnem Ferah Antalya konseri icin Biletix sayfasinda
+            "Yakinda" ifadesi artik bulunamadi.
 
-            GitHub Actions, Gmail uzerinden sana email gonderebiliyor.
+            Bilet satis durumu degismis olabilir.
+
+            Hemen kontrol et:
+
+            https://www.biletix.com/etkinlik/5PSF7/TURKIYE/tr
+
+            Konser:
+            Sebnem Ferah
+            10 Ekim 2026
+            Antalya
