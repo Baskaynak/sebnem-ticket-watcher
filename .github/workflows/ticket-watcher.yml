@@ -28,3 +28,22 @@ jobs:
           else
             echo "Yakinda ifadesi bulunamadi. Satis durumu degismis olabilir!"
           fi
+
+      - name: Send test email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
+          subject: "Sebnem Ticket Watcher - Test"
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+
+          body: |
+            Test basarili!
+
+            GitHub Actions, Gmail uzerinden sana email gonderebiliyor.
