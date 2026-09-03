@@ -1,0 +1,12 @@
+name: Sebnem Ticket Watcher
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test watcher
+        run: echo "Sebnem Ferah Ticket Watcher calisiyor!"
