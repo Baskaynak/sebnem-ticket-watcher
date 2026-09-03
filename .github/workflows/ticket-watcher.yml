@@ -3,6 +3,9 @@ name: Sebnem Ticket Watcher
 on:
   workflow_dispatch:
 
+  schedule:
+    - cron: '*/10 * * * *'
+
 jobs:
   check-ticket:
     runs-on: ubuntu-latest
