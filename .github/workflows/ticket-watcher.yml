@@ -6,11 +6,17 @@ on:
   schedule:
     - cron: '*/10 * * * *'
 
+permissions:
+  contents: write
+
 jobs:
   check-ticket:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Check Biletix ticket status
         id: ticket_check
         run: |
@@ -22,33 +28,39 @@ jobs:
             -w "HTTP Status: %{http_code}\n" \
             "https://www.biletix.com/etkinlik/5PSF7/TURKIYE/tr"
 
-          echo "Indirilen sayfa boyutu:"
-          wc -c biletix.html
-
           echo "Bilet durumu kontrol ediliyor..."
 
           if grep -qi "Yakında" biletix.html; then
             echo "Biletler henuz satisa cikmamis."
             echo "ticket_available=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Yakinda ifadesi bulunamadi!"
-            echo "Satis durumu degismis olabilir."
+            echo "Yakinda ifadesi bulunamadi."
             echo "ticket_available=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check if notification was already sent
+        id: notification_check
+        run: |
+          if [ -f ".ticket_notified" ]; then
+            echo "Bildirim daha once gonderilmis."
+            echo "already_notified=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Daha once bildirim gonderilmemis."
+            echo "already_notified=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send ticket notification email
-        if: steps.ticket_check.outputs.ticket_available == 'true'
+        if: |
+          steps.ticket_check.outputs.ticket_available == 'true' &&
+          steps.notification_check.outputs.already_notified == 'false'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_APP_PASSWORD }}
-
           subject: "ACIL - Sebnem Ferah Antalya biletleri satisa cikmis olabilir!"
-
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_USERNAME }}
 
@@ -66,3 +78,17 @@ jobs:
             Sebnem Ferah
             10 Ekim 2026
             Antalya
+
+      - name: Mark notification as sent
+        if: |
+          steps.ticket_check.outputs.ticket_available == 'true' &&
+          steps.notification_check.outputs.already_notified == 'false'
+        run: |
+          echo "Notification sent" > .ticket_notified
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .ticket_notified
+          git commit -m "Mark ticket notification as sent"
+          git push
