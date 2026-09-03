@@ -2,6 +2,15 @@ name: Sebnem Ticket Watcher
 
 on:
   workflow_dispatch:
+    inputs:
+      simulate_sale:
+        description: "Simulate ticket sale?"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
   schedule:
     - cron: '*/10 * * * *'
@@ -22,26 +31,39 @@ jobs:
         run: |
           echo "Biletix kontrol ediliyor..."
 
-          curl -L \
-            -A "Mozilla/5.0" \
-            -o biletix.html \
-            -w "HTTP Status: %{http_code}\n" \
-            "https://www.biletix.com/etkinlik/5PSF7/TURKIYE/tr"
-
-          echo "Bilet durumu kontrol ediliyor..."
-
-          if grep -qi "Yakında" biletix.html; then
-            echo "Biletler henuz satisa cikmamis."
-            echo "ticket_available=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Yakinda ifadesi bulunamadi."
+          if [ "${{ github.event.inputs.simulate_sale }}" = "true" ]; then
+            echo "TEST MODE aktif."
             echo "ticket_available=true" >> "$GITHUB_OUTPUT"
+          else
+            curl -L \
+              -A "Mozilla/5.0" \
+              -o biletix.html \
+              -w "HTTP Status: %{http_code}\n" \
+              "https://www.biletix.com/etkinlik/5PSF7/TURKIYE/tr"
+
+            echo "Bilet durumu kontrol ediliyor..."
+
+            if grep -qi "Yakında" biletix.html; then
+              echo "Biletler henuz satisa cikmamis."
+              echo "ticket_available=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "Yakinda ifadesi bulunamadi."
+              echo "ticket_available=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Check if notification was already sent
         id: notification_check
         run: |
-          if [ -f ".ticket_notified" ]; then
+          if [ "${{ github.event.inputs.simulate_sale }}" = "true" ]; then
+            MARKER=".ticket_notified_test"
+          else
+            MARKER=".ticket_notified"
+          fi
+
+          echo "marker=$MARKER" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$MARKER" ]; then
             echo "Bildirim daha once gonderilmis."
             echo "already_notified=true" >> "$GITHUB_OUTPUT"
           else
@@ -65,10 +87,7 @@ jobs:
           from: ${{ secrets.EMAIL_USERNAME }}
 
           body: |
-            Sebnem Ferah Antalya konseri icin Biletix sayfasinda
-            "Yakinda" ifadesi artik bulunamadi.
-
-            Bilet satis durumu degismis olabilir.
+            Sebnem Ferah Antalya konseri icin bilet satis durumu degismis olabilir.
 
             Hemen kontrol et:
 
@@ -84,11 +103,13 @@ jobs:
           steps.ticket_check.outputs.ticket_available == 'true' &&
           steps.notification_check.outputs.already_notified == 'false'
         run: |
-          echo "Notification sent" > .ticket_notified
+          MARKER="${{ steps.notification_check.outputs.marker }}"
+
+          echo "Notification sent" > "$MARKER"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add .ticket_notified
+          git add "$MARKER"
           git commit -m "Mark ticket notification as sent"
           git push
