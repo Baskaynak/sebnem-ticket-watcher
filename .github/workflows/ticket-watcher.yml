@@ -46,9 +46,17 @@ jobs:
             if grep -qi "Yakında" biletix.html; then
               echo "Biletler henuz satisa cikmamis."
               echo "ticket_available=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "Yakinda ifadesi bulunamadi."
+
+            elif grep -Eqi "Bilet Al|Satın Al|Bilet Satın Al" biletix.html; then
+              echo "Satis isareti bulundu."
+              echo "Biletler satisa cikmis olabilir."
               echo "ticket_available=true" >> "$GITHUB_OUTPUT"
+
+            else
+              echo "Yakinda ifadesi bulunamadi ama satis isareti de yok."
+              echo "Durum belirsiz."
+              echo "Yanlis alarm vermemek icin mail gonderilmeyecek."
+              echo "ticket_available=false" >> "$GITHUB_OUTPUT"
             fi
           fi
 
@@ -80,22 +88,32 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
+
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
           subject: "ACIL - Sebnem Ferah Antalya biletleri satisa cikmis olabilir!"
+
           to: ${{ secrets.EMAIL_TO }}
           from: ${{ secrets.EMAIL_USERNAME }}
 
           body: |
-            Sebnem Ferah Antalya konseri icin bilet satis durumu degismis olabilir.
+            Sebnem Ferah Antalya konseri icin
+            bilet satis durumu degismis olabilir.
 
-            Hemen kontrol et:
+            Biletix sayfasinda satis isareti tespit edildi.
+
+            HEMEN KONTROL ET:
 
             https://www.biletix.com/etkinlik/5PSF7/TURKIYE/tr
 
             Konser:
             Sebnem Ferah
+
+            Tarih:
             10 Ekim 2026
+
+            Sehir:
             Antalya
 
       - name: Mark notification as sent
